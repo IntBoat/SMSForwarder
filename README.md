@@ -6,6 +6,7 @@
 2. 在 Profile 中新增 Event > Phone > Received Text
 3. 在 Task 中新增 Action > Javascript-let
 4. 複製 `XMLHttpRequest.js` 或 `WithCode.js` 的內容到 Script 欄位
+5. 留意 `Auto Exit` 不要點選，否則有可能出現短信轉發尚考轉發，程式就已經被終止的問題。
 
 ### 簡單版
 
