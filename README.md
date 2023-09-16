@@ -20,3 +20,4 @@
 - 轉發 SMS 到 Telegram
 - 轉發 MMS 到 Telegram
 - 自動複製驗證碼
+- 時間會以 Emoji 方式顯示

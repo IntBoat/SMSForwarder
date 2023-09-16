@@ -14,6 +14,115 @@ let apiKey = "_BOT_API_KEY_";
 let chatID = "_CHAT_ID_";
 let apiUrl = "api.telegram.org";
 
+const clockFaces = [{
+    face: '🕛',
+    time: ['12:00', '00:00']
+},
+    {
+        face: '🕧',
+        time: ['12:30', '00:30']
+    },
+    {
+        face: '🕐',
+        time: ['13:00', '01:00']
+    },
+    {
+        face: '🕜',
+        time: ['13:30', '01:30']
+    },
+    {
+        face: '🕑',
+        time: ['14:00', '02:00']
+    },
+    {
+        face: '🕝',
+        time: ['14:30', '02:30']
+    },
+    {
+        face: '🕒',
+        time: ['15:00', '03:00']
+    },
+    {
+        face: '🕞',
+        time: ['15:30', '03:30']
+    },
+    {
+        face: '🕓',
+        time: ['16:00', '04:00']
+    },
+    {
+        face: '🕟',
+        time: ['16:30', '04:30']
+    },
+    {
+        face: '🕔',
+        time: ['17:00', '05:00']
+    },
+    {
+        face: '🕠',
+        time: ['17:30', '05:30']
+    },
+    {
+        face: '🕕',
+        time: ['18:00', '06:00']
+    },
+    {
+        face: '🕡',
+        time: ['18:30', '06:30']
+    },
+    {
+        face: '🕖',
+        time: ['19:00', '07:00']
+    },
+    {
+        face: '🕢',
+        time: ['19:30', '07:30']
+    },
+    {
+        face: '🕗',
+        time: ['20:00', '08:00']
+    },
+    {
+        face: '🕣',
+        time: ['20:30', '08:30']
+    },
+    {
+        face: '🕘',
+        time: ['21:00', '09:00']
+    },
+    {
+        face: '🕤',
+        time: ['21:30', '09:30']
+    },
+    {
+        face: '🕙',
+        time: ['22:00', '10:00']
+    },
+    {
+        face: '🕥',
+        time: ['22:30', '10:30']
+    },
+    {
+        face: '🕚',
+        time: ['23:00', '11:00']
+    },
+    {
+        face: '🕦',
+        time: ['23:30', '11:30']
+    }
+]
+
+function time2emoji(t) {
+    const hour = parseInt(t.split('.')[0]);
+    const minutes = parseInt(t.split('.')[0]);
+    return clockFaces.find((element) => {
+        return element.time.find((time) => {
+            const minute = parseInt(time.split(':')[1]);
+            return ((minute === 30 && (minutes >= 15 && minutes <= 45)) || (minute === 0 && (minutes < 15 || minutes > 45))) && t.split('.')[0] === time.split(':')[0];
+        });
+    }).face;
+}
+
 let senderName = global('SMSRN').replace("+852", "");
 const re = /\d*/g;
 if (senderName.match(re)[0].length > 0) {
@@ -28,7 +137,7 @@ messageBody = messageBody.replace(digRe, function (match) {
     return `<code>${match}</code>`;
 });
 
-const Message = `✉ <b>${global('SMSRF')} ${(senderName !== "") ? "(#" + (senderName) + ")" : ""}</b>\n時間：${global('SMSRD')} ${global('SMSRT').replace('.', ':')}\n\n${messageBody}`;
+const Message = `✉ <b>${global('SMSRF')} ${(senderName !== "") ? "(#" + (senderName) + ")" : ""}</b>\n${time2emoji(global('SMSRT'))} ${global('SMSRD')} ${global('SMSRT').replace('.', ':')}\n\n${messageBody}`;
 
 let myHeaders = new Headers();
 myHeaders.append("Content-Type", "application/x-www-form-urlencoded");
