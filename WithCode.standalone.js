@@ -9,9 +9,14 @@
 // function exit() {
 //     console.info("test");
 // }
-let apiKey = "_BOT_API_KEY_";
-let chatID = "_CHAT_ID_";
-let apiUrl = "api.telegram.org";
+
+if (typeof apiKey === 'undefined') {
+    var apiKey = "_BOT_API_KEY_";
+}
+if (typeof chatID === 'undefined') {
+    var chatID = "_CHAT_ID_";
+}
+const apiUrl = "api.telegram.org";
 
 function toEmoji(t) {
     let d=~~(t.split('.')[0]%12*2+t.split('.')[1]/30+0.5);d+=d<2?24:0;
@@ -32,8 +37,8 @@ if (isNightTime) {
     SilentEmoji = "🔕";
 }
 
-let SMSRB = global('SMSRB');
-let MMSRS = global('MMSRS');
+const SMSRB = global('SMSRB');
+const MMSRS = global('MMSRS');
 let messageBody = (SMSRB === "%SMSRB") ? (MMSRS === "%MMSRS") ? "無法獲取短訊內容" : MMSRS : SMSRB;
 const digRe = /(\d+-\d+-\d+)|(\d{3,}-\d{3,})|\d{4,}/gm;
 messageBody = messageBody.replace(digRe, function (match) {
