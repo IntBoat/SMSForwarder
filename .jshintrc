@@ -1,3 +1,26 @@
 {
-  "esversion": 6
+  "asi": false,
+  "boss": true,
+  "eqeqeq": true,
+  "eqnull": true,
+  "esversion": 6,
+  "expr": true,
+  "funcscope": false,
+  "globals": {
+    "define": false
+  },
+  "indent": 2,
+  "lastsemic": true,
+  "latedef": "nofunc",
+  "laxcomma": false,
+  "loopfunc": false,
+  "newcap": true,
+  "noyield": true,
+  "quotmark": true,
+  "strict": true,
+  "sub": true,
+  "undef": true,
+  "unused": true,
+  "validthis": false,
+  "node": true
 }

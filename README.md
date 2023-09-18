@@ -31,6 +31,8 @@
 - 自動複製驗證碼
 - 時間會以 Emoji 方式顯示
 
+Ref: [Paxxs's SMS_Forward_Tasker.js](https://gist.github.com/Paxxs/3bd1a694d8101054b6e04389d694c5e4)
+
 ### 編譯 `WithCode.js`
 1. 在根目錄執行 `yarn install` 及 `yarn build`
 2. 在 `dist/` 中找到 `WithCode.bundle.js`，複製內容到 Tasker 中的 Javascript-let 中的 Script 欄位
