@@ -1,4 +1,3 @@
-'use strict';
 // function global(param) {
 //     if (param === 'SMSRN') return '+85212345678';
 //     if (param === 'SMSRF') return '神奇的小天使';
@@ -21,7 +20,6 @@ function toEmoji(t) {
     d += d < 2 ? 24 : 0;
     return String.fromCharCode(55357, 56655 + (d + d % 2 * 23) / 2);
 }
-
 if (typeof api_key === 'undefined') {
     var api_key = '_BOT_API_KEY_';
 }

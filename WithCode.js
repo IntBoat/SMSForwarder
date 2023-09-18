@@ -1,4 +1,3 @@
-'use strict';
 import {toEmoji} from 'emoji-clockface';
 
 let api_key = '_BOT_API_KEY_';

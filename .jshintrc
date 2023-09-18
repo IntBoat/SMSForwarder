@@ -7,20 +7,23 @@
   "expr": true,
   "funcscope": false,
   "globals": {
-    "define": false
+    "define": false,
+    "global": true,
+    "flash": true,
+    "exit": true
   },
   "indent": 2,
   "lastsemic": true,
-  "latedef": "nofunc",
+  "latedef": false,
   "laxcomma": false,
   "loopfunc": false,
   "newcap": true,
   "noyield": true,
   "quotmark": true,
-  "strict": true,
+  "strict": false,
   "sub": true,
   "undef": true,
   "unused": true,
   "validthis": false,
-  "node": true
+  "browser": true
 }
