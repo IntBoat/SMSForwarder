@@ -9,14 +9,11 @@
 // function exit() {
 //     console.info("test");
 // }
-
-import {toEmoji} from "emoji-clockface";
-
 let apiKey = "_BOT_API_KEY_";
 let chatID = "_CHAT_ID_";
 let apiUrl = "api.telegram.org";
 
-function time2emoji(t) {
+function toEmoji(t) {
     let d=~~(t.split('.')[0]%12*2+t.split('.')[1]/30+0.5);d+=d<2?24:0;
     return String.fromCharCode(55357,56655+(d+d%2*23)/2);
 }
