@@ -9,7 +9,7 @@
 3. 在 Task 中新增 Action > Javascript-let
 4. 複製 `XMLHttpRequest.standalone.js` 或 `WithCode.standalone.js` 的內容到 Script 欄位
     - `dist/` 中的檔案是經過壓縮的，需更改 `_CHAT_ID_` 及 `_BOT_API_KEY_`，留意 `_BOT_API_KEY_` 前面要保留 `bot` 字串。
-5. 留意 `Auto Exit` 不要點選，否則有可能出現短信轉發尚考轉發，程式就已經被終止的問題。
+5. 留意 `Auto Exit` 不要點選，否則有可能出現簡訊轉發尚考轉發，程式就已經被終止的問題。
 
 ### 簡單版
 
