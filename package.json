@@ -16,7 +16,8 @@
   },
   "devDependencies": {
     "jshint": "^2.13.6",
-    "webpack": "^5.88.2"
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4"
   },
   "dependencies": {
     "emoji-clockface": "^0.1.2"
