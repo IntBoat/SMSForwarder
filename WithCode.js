@@ -18,8 +18,8 @@ if (isNightTime) {
     SilentEmoji = "🔕";
 }
 
-let SMSRB = global('SMSRB');
-let MMSRS = global('MMSRS');
+const SMSRB = global('SMSRB');
+const MMSRS = global('MMSRS');
 let messageBody = (SMSRB === "%SMSRB") ? (MMSRS === "%MMSRS") ? "無法獲取短訊內容" : MMSRS : SMSRB;
 const digRe = /(\d+-\d+-\d+)|(\d{3,}-\d{3,})|\d{4,}/gm;
 messageBody = messageBody.replace(digRe, function (match) {
