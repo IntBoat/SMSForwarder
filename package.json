@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "jshint": "^2.13.6",
+    "jest": "^29.7.0",
     "webpack": "^5.88.2"
   },
   "dependencies": {
