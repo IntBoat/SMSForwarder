@@ -10,11 +10,11 @@
 //     console.info("test");
 // }
 
-if (typeof apiKey === 'undefined') {
-    var apiKey = "_BOT_API_KEY_";
+if (typeof api_key === 'undefined') {
+    var api_key = "_BOT_API_KEY_";
 }
-if (typeof chatID === 'undefined') {
-    var chatID = "_CHAT_ID_";
+if (typeof chat_id === 'undefined') {
+    var chat_id = "_CHAT_ID_";
 }
 const apiUrl = "api.telegram.org";
 
@@ -51,7 +51,7 @@ let myHeaders = new Headers();
 myHeaders.append("Content-Type", "application/x-www-form-urlencoded");
 
 let urlencoded = new URLSearchParams();
-urlencoded.append("chat_id", chatID);
+urlencoded.append("chat_id", chat_id);
 urlencoded.append("text", Message);
 urlencoded.append("parse_mode", "HTML");
 urlencoded.append("disable_web_page_preview", "true");
@@ -69,7 +69,7 @@ let requestOptions = {
     redirect: 'follow'
 };
 
-fetch(`https://${apiUrl}/bot${apiKey}/sendMessage`, requestOptions)
+fetch(`https://${apiUrl}/bot${api_key}/sendMessage`, requestOptions)
     .then(response => response.text())
     .then(result => console.log(result))
     .catch(error => console.log('error', error))
