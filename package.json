@@ -1,0 +1,26 @@
+{
+  "name": "sms-forwarder",
+  "version": "1.0.0",
+  "description": "使用 Tasker 轉發 SMS 到 Telegram，並且自動複製驗證碼。",
+  "module": "WithCode.js",
+  "type": "module",
+  "repository": "https://git.zedo.dev/IntBoat/SMSForwarder.git",
+  "author": "IntBoat <info@zedo.dev>",
+  "license": "MIT",
+  "files": [
+    "WithCode.js"
+  ],
+  "scripts": {
+    "test": "jest",
+    "lint": "jshint WithCode.js WithCode.standalone.js XMLHttpRequest.standalone.js",
+    "build": "webpack --config webpack.config.js"
+  },
+  "devDependencies": {
+    "jshint": "^2.13.6",
+    "webpack": "^5.88.2"
+  },
+  "dependencies": {
+    "emoji-clockface": "^0.1.2"
+  },
+  "main": "index.js"
+}

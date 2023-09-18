@@ -1,16 +1,19 @@
-# 使用 Tasker 轉發 SMS 到 Telegram
+# SMSForwarder
+
+使用 Tasker 轉發 SMS 到 Telegram，並且自動複製驗證碼。
 
 ## 安裝
 
 1. 安裝 Tasker
 2. 在 Profile 中新增 Event > Phone > Received Text
 3. 在 Task 中新增 Action > Javascript-let
-4. 複製 `XMLHttpRequest.js` 或 `WithCode.js` 的內容到 Script 欄位
+4. 複製 `XMLHttpRequest.standalone.js` 或 `WithCode.standalone.js` 的內容到 Script 欄位
+    - `dist/` 中的檔案是經過壓縮的，需更改 `_CHAT_ID_` 及 `_BOT_API_KEY_`，留意 `_BOT_API_KEY_` 前面要保留 `bot` 字串。
 5. 留意 `Auto Exit` 不要點選，否則有可能出現短信轉發尚考轉發，程式就已經被終止的問題。
 
 ### 簡單版
 
-`XMLHttpRequest.js` 是簡易版，功能只有直接轉送 SMS 到 Telegram。
+`XMLHttpRequest.standalone.js` 是簡易版，功能只有直接轉送 SMS 到 Telegram。
 
 ### 進階版
 
@@ -21,3 +24,7 @@
 - 轉發 MMS 到 Telegram
 - 自動複製驗證碼
 - 時間會以 Emoji 方式顯示
+
+### 編譯 `WithCode.js`
+1. 在根目錄執行 `yarn install` 及 `yarn build`
+2. 在 `dist/` 中找到 `WithCode.bundle.js`，複製內容到 Tasker 中的 Javascript-let 中的 Script 欄位

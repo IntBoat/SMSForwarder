@@ -1,6 +1,6 @@
 let apiKey = "_BOT_API_KEY_";
 let chatID = "_CHAT_ID_";
-let url = `https://api.telegram.org/bot${apiKey}/sendMessage` // The url to request
+let url = `https://api.telegram.org/bot${apiKey}/sendMessage`; // The url to request
 
 let obj = {
     chat_id: chatID,
