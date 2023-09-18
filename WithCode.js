@@ -9,6 +9,14 @@ const re = /\d*/g;
 if (senderName.match(re)[0].length > 0) {
     senderName = "";
 }
+const now = new Date();
+const hour = now.getHours();
+const isNightTime = hour >= 22 || hour < 7;
+let SilentEmoji = "";
+if (isNightTime) {
+    // add silent emoji to message
+    SilentEmoji = "🔕";
+}
 
 let SMSRB = global('SMSRB');
 let MMSRS = global('MMSRS');
@@ -18,7 +26,7 @@ messageBody = messageBody.replace(digRe, function (match) {
     return `<code>${match}</code>`;
 });
 
-const Message = `✉ <b>${global('SMSRF')} ${(senderName !== "") ? "(#" + (senderName) + ")" : ""}</b>\n${toEmoji(global('SMSRT').split('.')[0], global('SMSRT').split('.')[1])} ${global('SMSRD')} ${global('SMSRT').replace('.', ':')}\n\n${messageBody}`;
+const Message = `✉ <b>${global('SMSRF')} ${(senderName !== "") ? "(#" + (senderName) + ")" : ""}</b>\n${toEmoji(global('SMSRT').split('.')[0], global('SMSRT').split('.')[1])} ${global('SMSRD')} ${global('SMSRT').replace('.', ':')} ${SilentEmoji}\n\n${messageBody}`;
 
 let myHeaders = new Headers();
 myHeaders.append("Content-Type", "application/x-www-form-urlencoded");
@@ -27,6 +35,13 @@ let urlencoded = new URLSearchParams();
 urlencoded.append("chat_id", chatID);
 urlencoded.append("text", Message);
 urlencoded.append("parse_mode", "HTML");
+urlencoded.append("disable_web_page_preview", "true");
+urlencoded.append("protect_content", "true");
+
+// set disable_notification to true if time is between 22:00 and 07:00
+if (isNightTime) {
+    urlencoded.append("disable_notification", "true");
+}
 
 let requestOptions = {
     method: 'POST',
