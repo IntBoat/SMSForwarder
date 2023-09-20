@@ -1,3 +1,4 @@
+// jshint ignore: start
 // v1 tv6.2.12-rc
 function alarmVol(a1,a2,a3){return true;}
 function alert(a1,a2,a3,a4,a5,a6,a7){return true;}

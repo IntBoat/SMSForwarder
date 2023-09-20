@@ -3,7 +3,7 @@
   "boss": true,
   "eqeqeq": true,
   "eqnull": true,
-  "esversion": 6,
+  "esversion": 9,
   "expr": true,
   "funcscope": false,
   "globals": {

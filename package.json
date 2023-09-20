@@ -11,7 +11,7 @@
     "WithCode.js"
   ],
   "scripts": {
-    "lint": "jshint WithCode.js WithCode.standalone.js XMLHttpRequest.standalone.js",
+    "lint": "jshint *.js",
     "build": "webpack --config webpack.config.js"
   },
   "devDependencies": {
