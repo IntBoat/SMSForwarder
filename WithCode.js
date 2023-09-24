@@ -23,7 +23,6 @@ const Message = '✉ <b>' + senderNumber + senderName + '</b>\n' + toEmoji(globa
 tg.sendMessage({
     text: Message,
     disable_web_page_preview: true,
-    protect_content: true,
     resultHandler: (result) => {
         if (result.ok) {
             flash('📩 信息已轉發。');

@@ -59,7 +59,6 @@ const requestOptions = {
         text: Message,
         parse_mode: 'HTML',
         disable_web_page_preview: true,
-        protect_content: true,
         // set disable_notification to true if time is between 22:00 and 07:00
         disable_notification: isNightTime
     }),
