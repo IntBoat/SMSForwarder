@@ -2,6 +2,7 @@
 export default {
     entry: {
         WithCode: './WithCode.js',
+        SMSForwarder: './WithCode.part.js',
         Notify: './Notify.js'
     },
     mode: 'production',

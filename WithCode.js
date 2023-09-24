@@ -8,8 +8,9 @@ const smsBody = global('SMSRB');
 const mmsBody = global('MMSRS');
 const digRe = /(\d+-\d+-\d+)|(\d{3,}-\d{3,})|\d{5,}/gm;
 
-let senderName = ' #' + global('SMSRN') + ')';
-if (senderName.match(/\s?\(?#?\+?\d+\)?/g)[0].length > 0) {
+let senderName = ' (#' + global('SMSRN') + ')';
+const senderNameMatch = senderName.match(/\s?\(?#?\+?\d+\)?/g);
+if (senderNameMatch && senderNameMatch[0].length > 0) {
     senderName = '';
 }
 const senderNumber = global('SMSRF').replace('+852', '');
