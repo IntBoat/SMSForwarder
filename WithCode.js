@@ -7,8 +7,11 @@ const SilentEmoji = tg.isNightTime ? '🔕' : '';
 const smsBody = global('SMSRB');
 const mmsBody = global('MMSRS');
 const digRe = /(\d+-\d+-\d+)|(\d{3,}-\d{3,})|\d{5,}/gm;
-
-let senderName = ' (#' + global('SMSRN') + ')';
+let SMSRN = global('SMSRN');
+if (SMSRN.indexOf("#") !== -1) {
+    SMSRN = SMSRN.split("#")[1];
+}
+let senderName = ' (#' +SMSRN + ')';
 const senderNameMatch = senderName.match(/\s?\(?#?\+?\d+\)?/g);
 if (senderNameMatch && senderNameMatch[0].length > 0) {
     senderName = '';
