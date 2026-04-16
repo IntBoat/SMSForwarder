@@ -170,9 +170,7 @@ var nameSuffix = ' (#' + rn + ')';
 var nameMatch = nameSuffix.match(/\s?\(?#?\+?\d+\)?/g);
 if (nameMatch && nameMatch[0].length) nameSuffix = '';
 
-var resolved = smsBody === CFG.sms_placeholder
-    ? (mmsBody === CFG.mms_placeholder ? CFG.text_no_sms : mmsBody)
-    : smsBody;
+var resolved = smsBody === CFG.sms_placeholder ? (mmsBody === CFG.mms_placeholder ? CFG.text_no_sms : mmsBody) : smsBody;
 
 var header =
     '*' + escMv2('✉ ' + global('SMSRF').replace(CFG.phone_strip_prefix, '') + nameSuffix) + '*\n' +

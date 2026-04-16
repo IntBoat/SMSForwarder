@@ -9,6 +9,7 @@
   "globals": {
     "define": false,
     "global": true,
+    "globalThis": false,
     "flash": true,
     "exit": true
   },
