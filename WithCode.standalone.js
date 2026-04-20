@@ -7,7 +7,7 @@ var CFG = {
     ai_api_key: '',
     ai_model: 'deepseek-chat',
     ai_base_url: 'https://api.deepseek.com/v1/chat/completions',
-    ai_temperature: 0.2,
+    ai_temperature: 0.1,
     api_key: '',
     chat_id: '',
     telegram_host: 'api.telegram.org',
@@ -16,7 +16,11 @@ var CFG = {
     phone_strip_prefix: '+852',
     sms_placeholder: '%SMSRB',
     mms_placeholder: '%MMSRS',
-    text_no_sms: '無法獲取短訊內容'
+    text_no_sms: '無法獲取短訊內容',
+    /** 偵測到驗證碼／OTP 時是否寫入系統剪貼簿（Tasker 內建 setClip） */
+    copy_otp: true,
+    /** 複製成功時是否 flash 提示（不影響錯誤提示） */
+    copy_otp_flash: false
 };
 
 (function mergeCfg(base) {
@@ -146,6 +150,7 @@ function sendTg(text, mode, done) {
 }
 
 function sendBody(mv2) {
+    if (!extractedOtp) tryCopyOtp(extractOtpFromAiBody(mv2));
     var body = escDecimalsOutsideCode(normBackticks(String(mv2).replace(/^\n+/, '')));
     sendTg(header + body, 'MarkdownV2', function () {
         if (typeof exit !== 'undefined') exit();
@@ -156,6 +161,53 @@ function fallbackBody(raw) {
     return escMv2(raw).replace(DIG_RE, function (m) {
         return '`' + escMv2Code(m) + '`';
     });
+}
+
+/** 從簡訊原文擷取 OTP／驗證碼（4～8 位數字） */
+function extractOtpFromSms(raw) {
+    if (!raw || raw === CFG.text_no_sms) return null;
+    var s = String(raw);
+    var patterns = [
+        /驗證碼[為是：:為\s]*(\d{4,8})\b/i,
+        /验证码[是为：:\s]*(\d{4,8})\b/i,
+        /\bOTP[：:\s]*(\d{4,8})\b/i,
+        /動態密碼[：:\s]*(\d{4,8})/i,
+        /动态密码[：:\s]*(\d{4,8})/i,
+        /(?:code|CODE)\s*[：:\s]+\s*(\d{4,8})\b/,
+        /\[(\d{4,8})\]/,
+        /\bPIN[碼码]?[：:\s]*(\d{4,8})\b/i,
+        /授權碼[：:\s]*(\d{4,8})/i,
+        /授权码[：:\s]*(\d{4,8})/i
+    ];
+    var i, m;
+    for (i = 0; i < patterns.length; i++) {
+        m = s.match(patterns[i]);
+        if (m && m[1]) return m[1];
+    }
+    if (/驗證|验证|OTP|otp|校驗|校验|動態密|动态密|授權碼|授权码/i.test(s)) {
+        m = s.match(/(?:^|[^\d])(\d{4,8})(?:[^\d]|$)/);
+        if (m) return m[1];
+    }
+    return null;
+}
+
+/** AI 輸出含「OTP／驗證碼」且行內 code 時，擷取反引號內數字 */
+function extractOtpFromAiBody(t) {
+    if (!t || !CFG.copy_otp) return null;
+    var s = String(t);
+    if (!/OTP|驗證碼|验证码|動態|动态|授權碼|授权码/i.test(s)) return null;
+    var m = s.match(/`(\d{4,8})`/);
+    return m ? m[1] : null;
+}
+
+function tryCopyOtp(code) {
+    if (!CFG.copy_otp || code == null || code === '') return;
+    try {
+        if (typeof setClip === 'function') {
+            var ok = setClip(String(code), false);
+            if (CFG.copy_otp_flash && ok) flash('📋 已複製驗證碼');
+        }
+    } catch (e) { /* Tasker 非 JS 環境或權限不足時略過 */ }
 }
 
 var h = new Date().getHours();
@@ -171,6 +223,9 @@ var nameMatch = nameSuffix.match(/\s?\(?#?\+?\d+\)?/g);
 if (nameMatch && nameMatch[0].length) nameSuffix = '';
 
 var resolved = smsBody === CFG.sms_placeholder ? (mmsBody === CFG.mms_placeholder ? CFG.text_no_sms : mmsBody) : smsBody;
+
+var extractedOtp = (resolved !== CFG.text_no_sms) ? extractOtpFromSms(resolved) : null;
+if (extractedOtp) tryCopyOtp(extractedOtp);
 
 var header =
     '*' + escMv2('✉ ' + global('SMSRF').replace(CFG.phone_strip_prefix, '') + nameSuffix) + '*\n' +

@@ -11,7 +11,8 @@
     "global": true,
     "globalThis": false,
     "flash": true,
-    "exit": true
+    "exit": true,
+    "setClip": false
   },
   "indent": 2,
   "lastsemic": true,
