@@ -137,11 +137,35 @@ function processPlainWithCodePlaceholders(segment, codes) {
     return result;
 }
 
+function shouldDropBoilerplateLine(line) {
+    var s = String(line || '').replace(/[\s\u3000]+/g, '').toLowerCase();
+    if (!s) return false;
+    if (/(服務受條款及細則約束|條款及細則|terms|termsandconditions)/i.test(s)) return true;
+    if (/(若非本人操作|非本人操作|請即重設密碼|重設密碼|resetpassword)/i.test(s)) return true;
+    if (/(不要分享|請勿分享|不要轉發|請勿轉發|驗證碼|otp|one-timepassword)/i.test(s) &&
+        /(分享|轉發|透露|告知|他人)/i.test(s)) return true;
+    return false;
+}
+
+function pruneBoilerplateTips(raw) {
+    var lines = String(raw || '').split('\n');
+    var kept = [];
+    var i;
+    for (i = 0; i < lines.length; i++) {
+        if (!shouldDropBoilerplateLine(lines[i])) kept.push(lines[i]);
+    }
+    var body = kept.join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .replace(/^\n+|\n+$/g, '');
+    return body || String(raw || '').trim();
+}
+
 /**
  * 工具回傳的 message_body 未必完全符合 MV2；在保留 *粗體* 與 `` `code` `` 的前提下
  * 對其餘字元做 Telegram 要求的跳脫，避免 sendMessage 因 parse 失敗而退回純文字。
  */
 function sanitizeToolBodyForMarkdownV2(raw) {
+    raw = pruneBoilerplateTips(raw);
     raw = normBackticks(String(raw).replace(/^\n+/, ''));
     var ex = extractInlineCodes(raw);
     var s = ex.text;
@@ -188,6 +212,7 @@ var SYSTEM_PROMPT = [
     '• 金額：有交易金額時；建議整段放反引號，例如 ' + '`HKD 100.00`' + '（避免小數點觸發 MV2）',
     '• 有效期：僅當原文**明文**寫出截止、幾分鐘內有效等；未提及則不要出現有效期相關行',
     '廣告／促銷：最醒目的一句或關鍵優惠可再用 *…* 加粗。',
+    '以下屬於樣板免責提醒，預設不輸出：服務受條款及細則約束、若非本人操作請即重設密碼、不要分享或轉發驗證碼等句型。',
     '',
     '若條列後仍有長段正文無法濃縮成點列：空一行，單獨一行 *內容*，其下用繁中短敘補足（勿重複已列重點）。若無此必要則省略 *內容*。',
     '',

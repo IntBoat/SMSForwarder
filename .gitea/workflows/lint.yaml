@@ -1,15 +1,23 @@
-name: Test and Lint
+name: Lint, Build and Sync dist
 
 on:
   push:
     branches:
       - master
+    paths:
+      - WithCode.standalone.js
+      - scripts/**
+      - package.json
+      - package-lock.json
+      - .gitea/workflows/lint.yaml
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: https://github.com/actions/checkout@v3
+        with:
+          fetch-depth: 0
       - uses: https://github.com/actions/setup-node@v3
         with:
           node-version: '18.x'
@@ -17,3 +25,14 @@ jobs:
       - run: npm install
       - run: npm run lint
       - run: npm run build
+      - name: Commit dist updates
+        run: |
+          if git diff --quiet -- dist; then
+            echo "No dist changes to commit."
+            exit 0
+          fi
+          git config user.name "gitea-actions[bot]"
+          git config user.email "gitea-actions[bot]@localhost"
+          git add dist
+          git commit -m "chore(ci): auto-build dist from source changes [skip ci]"
+          git push

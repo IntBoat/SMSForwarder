@@ -34,8 +34,14 @@
 Ref: [Paxxs's SMS_Forward_Tasker.js](https://gist.github.com/Paxxs/3bd1a694d8101054b6e04389d694c5e4)
 
 ### 編譯 `WithCode.js`
-1. 在根目錄執行 `yarn install` 及 `yarn build`
-2. 在 `dist/` 中找到 `WithCode.bundle.js`，複製內容到 Tasker 中的 Javascript-let 中的 Script 欄位
+1. 在根目錄執行 `npm ci` 及 `npm run build`
+2. 在 `dist/` 中找到 `WithCode.standalone.min.js`，複製內容到 Tasker 中的 Javascript-let 中的 Script 欄位
+
+### CI 自動更新 `dist/`
+
+當 `WithCode.standalone.js`、`scripts/` 或建置相關檔案被 push 到 `master` 時，Gitea Actions 會自動執行 `npm install` 與 `npm run build`。
+
+若 `dist/` 內容有變更，workflow 會自動提交更新，確保 `dist/WithCode.standalone.min.js` 與原始碼維持同步。
 
 ### 通用版
 
