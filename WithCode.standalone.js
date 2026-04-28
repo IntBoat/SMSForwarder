@@ -20,7 +20,12 @@ var CFG = {
     /** 偵測到驗證碼／OTP 時是否寫入系統剪貼簿（Tasker 內建 setClip） */
     copy_otp: true,
     /** 複製成功時是否 flash 提示（不影響錯誤提示） */
-    copy_otp_flash: false
+    copy_otp_flash: false,
+    /**
+     * 傳給 Chat Completions 的 tool_choice；設為 null 可省略（由模型決定是否呼叫工具）。
+     * 建議 'required' 以強制走工具；若供應商回 400 可改 null 並依賴 system 提示與客戶端校驗。
+     */
+    ai_tool_choice: 'required'
 };
 
 (function mergeCfg(base) {
@@ -75,9 +80,13 @@ function escDecimalsOutsideCode(s) {
 
 var DIG_RE = /(\d+-\d+-\d+)|(\d{3,}-\d{3,})|\d{5,}/gm;
 
+/** 與下方 tools 定義一致；訊息本體僅能經由此工具提交 */
+var SMS_FORWARD_TOOL_NAME = 'submit_sms_forward_body';
+
 var SYSTEM_PROMPT = [
     '你是短訊處理器。輸入為一則 SMS/MMS。請判斷類型、抽出簡訊內**所有重要資訊**，改寫為繁體中文（專有名詞與驗證碼數字保持正確）。',
-    '只輸出一段「訊息本體」，且須為 Telegram MarkdownV2 合法字串；不得含發送者、標題、日期時間、前言或結語；禁止 HTML；勿用 ``` 包住全文。',
+    '**嚴禁**在 assistant 的 `content` 文字裡輸出轉發訊息本體、條列內容或任何應出現在 Telegram 的完整格式化正文；`content` 僅可為空、極短確認語（例如「已提交」）或完全不寫。完整訊息本體**必須且僅能**透過工具 `' + SMS_FORWARD_TOOL_NAME + '` 的參數 `message_body` 提交。',
+    '`message_body` 須為 Telegram MarkdownV2 合法字串；不得含發送者、標題、日期時間、前言或結語；禁止 HTML；勿用 ``` 包住全文。',
     '',
     '【版面】',
     '第 1 行僅一行：*【類型】*（全形直角括號）。類型擇一或複合：廣告、驗證碼、OTP、通知、財務交易、物流、預約、系統、其他。',
@@ -95,25 +104,98 @@ var SYSTEM_PROMPT = [
     '【MarkdownV2】粗體 *…*。一般文字裡若字面出現 _ * [ ] ( ) ~ ` > # + - = | { } . ! 須在該字元前加反斜線；全形標點多半不必。OTP／金額優先用成對 `…` 行內 code；勿在反引號外多餘寫成 \\`123\\`。'
 ].join('\n');
 
+function buildSmsForwardTools() {
+    return [{
+        type: 'function',
+        function: {
+            name: SMS_FORWARD_TOOL_NAME,
+            description: 'Submit the final Telegram MarkdownV2 message body only here; do not put this text in message.content.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    message_body: {
+                        type: 'string',
+                        description: 'Body text per system rules; MarkdownV2-safe, no HTML, no full-body code fence.'
+                    }
+                },
+                required: ['message_body']
+            }
+        }
+    }];
+}
+
+/** @param {object} choice message 物件 */
+function extractBodyFromToolCalls(choice) {
+    var tc = choice.tool_calls;
+    var i, t, fn, rawArgs, obj, body;
+    if (tc && tc.length) {
+        for (i = 0; i < tc.length; i++) {
+            t = tc[i];
+            if (!t || t.type !== 'function') continue;
+            fn = t.function;
+            if (!fn || fn.name !== SMS_FORWARD_TOOL_NAME) continue;
+            rawArgs = fn.arguments != null ? fn.arguments : '{}';
+            try {
+                obj = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs;
+            } catch (e) {
+                throw new Error('工具參數 JSON 無法解析');
+            }
+            if (!obj || typeof obj.message_body !== 'string') throw new Error('工具缺少 message_body');
+            body = stripFence(obj.message_body);
+            if (!String(body).trim()) throw new Error('工具 message_body 為空');
+            return body;
+        }
+    }
+    if (choice.function_call && choice.function_call.name === SMS_FORWARD_TOOL_NAME) {
+        rawArgs = choice.function_call.arguments != null ? choice.function_call.arguments : '{}';
+        try {
+            obj = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs;
+        } catch (e2) {
+            throw new Error('工具參數 JSON 無法解析');
+        }
+        if (!obj || typeof obj.message_body !== 'string') throw new Error('工具缺少 message_body');
+        body = stripFence(obj.message_body);
+        if (!String(body).trim()) throw new Error('工具 message_body 為空');
+        return body;
+    }
+    return null;
+}
+
+/** @param {object} d chat completion JSON */
+function extractMessageFromAiResponse(d) {
+    var choice = d && d.choices && d.choices[0] && d.choices[0].message;
+    if (!choice) throw new Error('AI 回應無效');
+    var fromTool = extractBodyFromToolCalls(choice);
+    if (fromTool != null) return fromTool;
+    var content = choice.content;
+    if (content != null && String(content).trim()) {
+        throw new Error('AI 未使用工具而直接輸出正文，已拒絕');
+    }
+    throw new Error('AI 未透過工具提交內容');
+}
+
 function callAi(text) {
+    var payload = {
+        model: CFG.ai_model,
+        temperature: CFG.ai_temperature,
+        messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: String(text) }
+        ],
+        tools: buildSmsForwardTools()
+    };
+    if (CFG.ai_tool_choice != null && CFG.ai_tool_choice !== '') {
+        payload.tool_choice = CFG.ai_tool_choice;
+    }
     return fetch(String(CFG.ai_base_url).trim(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + CFG.ai_api_key },
-        body: JSON.stringify({
-            model: CFG.ai_model,
-            temperature: CFG.ai_temperature,
-            messages: [
-                { role: 'system', content: SYSTEM_PROMPT },
-                { role: 'user', content: String(text) }
-            ]
-        })
+        body: JSON.stringify(payload)
     }).then(function (r) {
         if (!r.ok) return r.text().then(function (t) { throw new Error(t || ('HTTP ' + r.status)); });
         return r.json();
     }).then(function (d) {
-        var c = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-        if (!c || !String(c).trim()) throw new Error('AI 回應無效');
-        return stripFence(c);
+        return extractMessageFromAiResponse(d);
     });
 }
 
