@@ -22,10 +22,10 @@ var CFG = {
     /** 複製成功時是否 flash 提示（不影響錯誤提示） */
     copy_otp_flash: false,
     /**
-     * 傳給 Chat Completions 的 tool_choice；設為 null 可省略（由模型決定是否呼叫工具）。
-     * 建議 'required' 以強制走工具；若供應商回 400 可改 null 並依賴 system 提示與客戶端校驗。
+     * 傳給 Chat Completions 的 tool_choice；設為 null 代表省略（由模型自行決定）。
+     * deepseek-v4-flash 若不支援特定 tool_choice，可維持 null 以確保請求成功。
      */
-    ai_tool_choice: 'required'
+    ai_tool_choice: null
 };
 
 (function mergeCfg(base) {
@@ -175,8 +175,8 @@ var SMS_FORWARD_TOOL_NAME = 'submit_sms_forward_body';
 
 var SYSTEM_PROMPT = [
     '你是短訊處理器。輸入為一則 SMS/MMS。請判斷類型、抽出簡訊內**所有重要資訊**，改寫為繁體中文（專有名詞與驗證碼數字保持正確）。',
-    '**嚴禁**在 assistant 的 `content` 文字裡輸出轉發訊息本體、條列內容或任何應出現在 Telegram 的完整格式化正文；`content` 僅可為空、極短確認語（例如「已提交」）或完全不寫。完整訊息本體**必須且僅能**透過工具 `' + SMS_FORWARD_TOOL_NAME + '` 的參數 `message_body` 提交。',
-    '`message_body` 須為 Telegram MarkdownV2 合法字串；不得含發送者、標題、日期時間、前言或結語；禁止 HTML；勿用 ``` 包住全文。',
+    '請直接在 assistant 的 `content` 輸出完整轉發訊息本體。',
+    '輸出內容須為 Telegram MarkdownV2 合法字串；不得含發送者、標題、日期時間、前言或結語；禁止 HTML；勿用 ``` 包住全文。',
     '',
     '【版面】',
     '第 1 行僅一行：*【類型】*（全形直角括號）。類型擇一或複合：廣告、驗證碼、OTP、通知、財務交易、物流、預約、系統、其他。',
@@ -193,26 +193,6 @@ var SYSTEM_PROMPT = [
     '',
     '【MarkdownV2】粗體 *…*。一般文字裡若字面出現 _ * [ ] ( ) ~ ` > # + - = | { } . ! 須在該字元前加反斜線；全形標點多半不必。OTP／金額優先用成對 `…` 行內 code；勿在反引號外多餘寫成 \\`123\\`。'
 ].join('\n');
-
-function buildSmsForwardTools() {
-    return [{
-        type: 'function',
-        function: {
-            name: SMS_FORWARD_TOOL_NAME,
-            description: 'Submit the final Telegram MarkdownV2 message body only here; do not put this text in message.content.',
-            parameters: {
-                type: 'object',
-                properties: {
-                    message_body: {
-                        type: 'string',
-                        description: 'Body text per system rules; MarkdownV2-safe, no HTML, no full-body code fence.'
-                    }
-                },
-                required: ['message_body']
-            }
-        }
-    }];
-}
 
 /** @param {object} choice message 物件 */
 function extractBodyFromToolCalls(choice) {
@@ -259,9 +239,9 @@ function extractMessageFromAiResponse(d) {
     if (fromTool != null) return fromTool;
     var content = choice.content;
     if (content != null && String(content).trim()) {
-        throw new Error('AI 未使用工具而直接輸出正文，已拒絕');
+        return stripFence(String(content));
     }
-    throw new Error('AI 未透過工具提交內容');
+    throw new Error('AI 回應缺少可用內容');
 }
 
 function callAi(text) {
@@ -271,8 +251,7 @@ function callAi(text) {
         messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: String(text) }
-        ],
-        tools: buildSmsForwardTools()
+        ]
     };
     if (CFG.ai_tool_choice != null && CFG.ai_tool_choice !== '') {
         payload.tool_choice = CFG.ai_tool_choice;
