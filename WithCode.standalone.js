@@ -149,17 +149,23 @@ function sanitizeToolBodyForMarkdownV2(raw) {
     var out = '';
     var i = 0;
     while (i < s.length) {
-        if (s.charAt(i) === '*') {
-            var close = findClosingBoldStar(s, i + 1);
-            if (close !== -1 && close > i + 1) {
-                var inner = s.slice(i + 1, close);
-                out += '*' + processPlainWithCodePlaceholders(inner, codes) + '*';
-                i = close + 1;
-                continue;
-            }
+        var star = s.indexOf('*', i);
+        if (star === -1) {
+            out += processPlainWithCodePlaceholders(s.slice(i), codes);
+            break;
         }
-        out += processPlainWithCodePlaceholders(s.slice(i, i + 1), codes);
-        i++;
+        if (star > i) {
+            out += processPlainWithCodePlaceholders(s.slice(i, star), codes);
+        }
+        // 現在位於 '*'；若找不到合法結束 '*'，就當作一般字元跳脫
+        var close = findClosingBoldStar(s, star + 1);
+        if (close !== -1 && close > star + 1) {
+            out += '*' + processPlainWithCodePlaceholders(s.slice(star + 1, close), codes) + '*';
+            i = close + 1;
+        } else {
+            out += escMv2('*');
+            i = star + 1;
+        }
     }
     return out;
 }
