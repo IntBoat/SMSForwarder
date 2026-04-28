@@ -68,17 +68,101 @@ function normBackticks(s) {
     return String(s).replace(/[\u2018\u2019\u201a\u201b\u2032\u2035\uff07]/g, '`');
 }
 
-function escDecimalsOutsideCode(s) {
-    var parts = String(s).split(/(`[^`]*`)/g);
-    for (var i = 0; i < parts.length; i += 2) {
-        parts[i] = parts[i].replace(/(\d+)\.(\d+)/g, function (_, a, b) {
-            return a + '\\.' + b;
-        });
+var DIG_RE = /(\d+-\d+-\d+)|(\d{3,}-\d{3,})|\d{5,}/gm;
+
+/** 抽出 `` `inline` ``，以佔位符替換（避免與粗體 * 解析互相干擾） */
+function extractInlineCodes(s) {
+    var codes = [];
+    var out = '';
+    var i = 0;
+    while (i < s.length) {
+        if (s.charAt(i) === '`') {
+            var j = i + 1;
+            var inner = '';
+            while (j < s.length) {
+                var cj = s.charAt(j);
+                if (cj === '`') break;
+                if (cj === '\\' && j + 1 < s.length) {
+                    inner += cj + s.charAt(j + 1);
+                    j += 2;
+                    continue;
+                }
+                inner += cj;
+                j++;
+            }
+            if (j < s.length) {
+                codes.push(inner);
+                out += '\uE000' + String.fromCharCode(0xE100 + codes.length - 1) + '\uE001';
+                i = j + 1;
+                continue;
+            }
+        }
+        out += s.charAt(i);
+        i++;
     }
-    return parts.join('');
+    return { text: out, codes: codes };
 }
 
-var DIG_RE = /(\d+-\d+-\d+)|(\d{3,}-\d{3,})|\d{5,}/gm;
+/** 自 start 起找下一個未跳脫的結束 *（粗體邊界） */
+function findClosingBoldStar(s, start) {
+    var i = start;
+    while (i < s.length) {
+        var c = s.charAt(i);
+        if (c === '\\' && i + 1 < s.length) {
+            i += 2;
+            continue;
+        }
+        if (c === '*') return i;
+        i++;
+    }
+    return -1;
+}
+
+var PLACEHOLDER_RE = /\uE000([\uE100-\uE1FF])\uE001/g;
+
+/** 將一段文字中的併位符還原為 MV2 行內 code，其餘字元全面 escMv2 */
+function processPlainWithCodePlaceholders(segment, codes) {
+    var result = '';
+    var last = 0;
+    var m;
+    PLACEHOLDER_RE.lastIndex = 0;
+    while ((m = PLACEHOLDER_RE.exec(segment)) !== null) {
+        result += escMv2(segment.slice(last, m.index));
+        var idx = m[1].charCodeAt(0) - 0xE100;
+        var inner = codes[idx] != null ? codes[idx] : '';
+        result += '`' + escMv2Code(inner) + '`';
+        last = PLACEHOLDER_RE.lastIndex;
+    }
+    result += escMv2(segment.slice(last));
+    return result;
+}
+
+/**
+ * 工具回傳的 message_body 未必完全符合 MV2；在保留 *粗體* 與 `` `code` `` 的前提下
+ * 對其餘字元做 Telegram 要求的跳脫，避免 sendMessage 因 parse 失敗而退回純文字。
+ */
+function sanitizeToolBodyForMarkdownV2(raw) {
+    raw = normBackticks(String(raw).replace(/^\n+/, ''));
+    var ex = extractInlineCodes(raw);
+    var s = ex.text;
+    var codes = ex.codes;
+    var out = '';
+    var i = 0;
+    while (i < s.length) {
+        if (s.charAt(i) === '*') {
+            var close = findClosingBoldStar(s, i + 1);
+            if (close !== -1 && close > i + 1) {
+                var inner = s.slice(i + 1, close);
+                out += '*' + processPlainWithCodePlaceholders(inner, codes) + '*';
+                i = close + 1;
+                continue;
+            }
+        }
+        out += processPlainWithCodePlaceholders(s.slice(i, i + 1), codes);
+        i++;
+    }
+    return out;
+}
 
 /** 與下方 tools 定義一致；訊息本體僅能經由此工具提交 */
 var SMS_FORWARD_TOOL_NAME = 'submit_sms_forward_body';
@@ -233,7 +317,7 @@ function sendTg(text, mode, done) {
 
 function sendBody(mv2) {
     if (!extractedOtp) tryCopyOtp(extractOtpFromAiBody(mv2));
-    var body = escDecimalsOutsideCode(normBackticks(String(mv2).replace(/^\n+/, '')));
+    var body = sanitizeToolBodyForMarkdownV2(String(mv2));
     sendTg(header + body, 'MarkdownV2', function () {
         if (typeof exit !== 'undefined') exit();
     });
