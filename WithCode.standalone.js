@@ -5,7 +5,7 @@
  */
 var CFG = {
     ai_api_key: '',
-    ai_model: 'deepseek-chat',
+    ai_model: 'deepseek-v4-flash',
     ai_base_url: 'https://api.deepseek.com/v1/chat/completions',
     ai_temperature: 0.1,
     api_key: '',
@@ -289,7 +289,7 @@ function callAi(text) {
     });
 }
 
-function sendTg(text, mode, done) {
+function sendTg(text, mode, done, quiet) {
     var body = {
         chat_id: CFG.chat_id,
         text: text,
@@ -303,22 +303,32 @@ function sendTg(text, mode, done) {
         body: JSON.stringify(body)
     }).then(function (r) { return r.json(); }).then(function (res) {
         if (res.ok) {
-            flash('📩 信息已轉發。');
+            if (!quiet) flash('📩 信息已轉發。');
             if (done) done(true);
             return;
         }
         var desc = res.description || '';
         if (mode === 'MarkdownV2' && /parse|entities/i.test(desc)) {
-            flash('📩 MarkdownV2 解析失敗，改以純文字重送。');
-            sendTg(text, null, done);
+            if (!quiet) flash('📩 MarkdownV2 解析失敗，改以純文字重送。');
+            sendTg(text, null, done, quiet);
             return;
         }
-        flash('📩 信息轉發錯誤：' + desc);
+        if (!quiet) flash('📩 信息轉發錯誤：' + desc);
         if (done) done(false);
     }).catch(function (e) {
-        flash('📩 信息轉發異常：' + e);
+        if (!quiet) flash('📩 信息轉發異常：' + e);
         if (done) done(false);
     });
+}
+
+function compactOneLine(s) {
+    return String(s).replace(/\s+/g, ' ').trim();
+}
+
+function sendAiErrorToTg(errMsg) {
+    var oneLine = compactOneLine(errMsg || '未知錯誤');
+    var clipped = oneLine.length > 300 ? oneLine.slice(0, 300) + '…' : oneLine;
+    sendTg('⚠️ AI 處理失敗：' + clipped, null, null, true);
 }
 
 function sendBody(mv2) {
@@ -409,7 +419,9 @@ if (resolved === CFG.text_no_sms) {
 } else {
     callAi(resolved).then(sendBody).catch(function (err) {
         var m = err && err.message ? err.message : String(err);
-        flash('AI 處理失敗（已改用後備格式）：' + (m.length > 180 ? m.slice(0, 180) + '…' : m));
+        var brief = m.length > 180 ? m.slice(0, 180) + '…' : m;
+        flash('AI 處理失敗（已改用後備格式）：' + brief);
+        sendAiErrorToTg(brief);
         sendBody(fallbackBody(resolved));
     });
 }
