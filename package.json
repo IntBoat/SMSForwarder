@@ -2,6 +2,7 @@
   "name": "sms-forwarder-tasker",
   "private": true,
   "scripts": {
+    "lint": "npm run typecheck",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "build": "tsc --project tsconfig.json && node scripts/build.mjs"
   },
