@@ -2,11 +2,12 @@
   "name": "sms-forwarder-tasker",
   "private": true,
   "scripts": {
-    "lint": "jshint WithCode.standalone.js",
-    "build": "node scripts/build.mjs"
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "build": "tsc --project tsconfig.json && node scripts/build.mjs"
   },
   "devDependencies": {
-    "jshint": "^2.13.6",
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3",
     "terser": "^5.37.0"
   }
 }

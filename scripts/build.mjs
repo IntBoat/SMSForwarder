@@ -5,7 +5,7 @@ import { minify } from 'terser';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
-const src = join(root, 'WithCode.standalone.js');
+const src = join(root, 'build', 'WithCode.standalone.js');
 const outDir = join(root, 'dist');
 const out = join(outDir, 'WithCode.standalone.min.js');
 

@@ -1,5 +1,10 @@
 export default class TelegramAPI {
-    constructor(apiKey, chatID, apiURL) {
+    apiKey: string;
+    chatID: string;
+    apiURL: string;
+    isNightTime: boolean;
+
+    constructor(apiKey: string, chatID: string, apiURL: string) {
         this.apiKey = apiKey;
         this.chatID = chatID;
         this.apiURL = apiURL;
@@ -18,7 +23,14 @@ export default class TelegramAPI {
         this.isNightTime = hour >= 22 || hour < 7;
     }
 
-    sendMessage(message) {
+    sendMessage(message: {
+        text: string;
+        parse_mode?: string;
+        resultHandler?: (result: any) => void;
+        errorHandler?: (error: any) => void;
+        exitHandler?: () => void;
+        [key: string]: any;
+    }) {
         if (!message.text) {
             flash('不能發送空白訊息。');
             return;
@@ -33,16 +45,23 @@ export default class TelegramAPI {
             parse_mode: message.parse_mode || 'HTML',
             disable_notification: this.isNightTime
         };
+        const mergedBody = {
+            ...defaultBody,
+            ...message
+        };
+        const formBody: Record<string, string> = {};
+        Object.keys(mergedBody).forEach((key) => {
+            const value = mergedBody[key];
+            if (typeof value === 'function' || value == null) return;
+            formBody[key] = String(value);
+        });
         const requestOptions = {
             method: 'POST',
             headers: new Headers({
                 'Content-Type': 'application/x-www-form-urlencoded'
             }),
-            body: new URLSearchParams({
-                ...defaultBody,
-                ...message
-            }),
-            redirect: 'follow'
+            body: new URLSearchParams(formBody),
+            redirect: 'follow' as RequestRedirect
         };
 
         fetch(`https://${this.apiURL}/bot${this.apiKey}/sendMessage`, requestOptions)

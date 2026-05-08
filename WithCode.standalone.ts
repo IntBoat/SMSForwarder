@@ -3,7 +3,26 @@
  * 設定集中在檔案開頭 CFG；Tasker 可先宣告同名變數覆寫（見 mergeCfg）。
  * 建置：npm run build → dist/WithCode.standalone.min.js
  */
-var CFG = {
+type Config = {
+    ai_api_key: string;
+    ai_model: string;
+    ai_base_url: string;
+    ai_temperature: number;
+    api_key: string;
+    chat_id: string;
+    telegram_host: string;
+    night_start_hour: number;
+    night_end_hour: number;
+    phone_strip_prefix: string;
+    sms_placeholder: string;
+    mms_placeholder: string;
+    text_no_sms: string;
+    copy_otp: boolean;
+    copy_otp_flash: boolean;
+    ai_tool_choice: string | null;
+};
+
+const CFG: Config = {
     ai_api_key: '',
     ai_model: 'deepseek-v4-flash',
     ai_base_url: 'https://api.deepseek.com/v1/chat/completions',
@@ -28,14 +47,18 @@ var CFG = {
     ai_tool_choice: null
 };
 
-(function mergeCfg(base) {
-    var g = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : {};
-    for (var k in base) {
-        if (Object.prototype.hasOwnProperty.call(g, k) && g[k] !== undefined && g[k] !== null) {
-            base[k] = g[k];
+(
+    function mergeCfg(base: Config) {
+        const g: Record<string, unknown> = typeof globalThis !== 'undefined'
+            ? (globalThis as Record<string, unknown>)
+            : (typeof window !== 'undefined' ? (window as unknown as Record<string, unknown>) : {});
+        for (const k in base) {
+            if (Object.prototype.hasOwnProperty.call(g, k) && g[k] !== undefined && g[k] !== null) {
+                (base as Record<string, unknown>)[k] = g[k];
+            }
         }
     }
-})(CFG);
+)(CFG);
 
 /** @param {string} rt Tasker SMSRT，如 14.45 */
 function toEmoji(rt) {
@@ -68,7 +91,7 @@ function normBackticks(s) {
     return String(s).replace(/[\u2018\u2019\u201a\u201b\u2032\u2035\uff07]/g, '`');
 }
 
-var DIG_RE = /(\d+-\d+-\d+)|(\d{3,}-\d{3,})|\d{5,}/gm;
+const DIG_RE = /(\d+-\d+-\d+)|(\d{3,}-\d{3,})|\d{5,}/gm;
 
 /** 抽出 `` `inline` ``，以佔位符替換（避免與粗體 * 解析互相干擾） */
 function extractInlineCodes(s) {
@@ -118,7 +141,7 @@ function findClosingBoldStar(s, start) {
     return -1;
 }
 
-var PLACEHOLDER_RE = /\uE000([\uE100-\uE1FF])\uE001/g;
+const PLACEHOLDER_RE = /\uE000([\uE100-\uE1FF])\uE001/g;
 
 /** 將一段文字中的併位符還原為 MV2 行內 code，其餘字元全面 escMv2 */
 function processPlainWithCodePlaceholders(segment, codes) {
@@ -195,9 +218,9 @@ function sanitizeToolBodyForMarkdownV2(raw) {
 }
 
 /** 與下方 tools 定義一致；訊息本體僅能經由此工具提交 */
-var SMS_FORWARD_TOOL_NAME = 'submit_sms_forward_body';
+const SMS_FORWARD_TOOL_NAME = 'submit_sms_forward_body';
 
-var SYSTEM_PROMPT = [
+const SYSTEM_PROMPT = [
     '你是短訊處理器。輸入為一則 SMS/MMS。請判斷類型、抽出簡訊內**所有重要資訊**，改寫為繁體中文（專有名詞與驗證碼數字保持正確）。',
     '請直接在 assistant 的 `content` 輸出完整轉發訊息本體。',
     '輸出內容須為 Telegram MarkdownV2 合法字串；不得含發送者、標題、日期時間、前言或結語；禁止 HTML；勿用 ``` 包住全文。',
@@ -219,45 +242,57 @@ var SYSTEM_PROMPT = [
     '【MarkdownV2】粗體 *…*。一般文字裡若字面出現 _ * [ ] ( ) ~ ` > # + - = | { } . ! 須在該字元前加反斜線；全形標點多半不必。OTP／金額優先用成對 `…` 行內 code；勿在反引號外多餘寫成 \\`123\\`。'
 ].join('\n');
 
+type ToolArgs = { message_body?: string };
+type ToolCall = {
+    type?: string;
+    function?: {
+        name?: string;
+        arguments?: unknown;
+    };
+};
+type Choice = {
+    content?: unknown;
+    tool_calls?: ToolCall[];
+    function_call?: {
+        name?: string;
+        arguments?: unknown;
+    };
+};
+type CompletionResponse = {
+    choices?: Array<{ message?: Choice }>;
+};
+
+function parseToolArgs(rawArgs: unknown): ToolArgs {
+    try {
+        return typeof rawArgs === 'string' ? JSON.parse(rawArgs || '{}') : ((rawArgs || {}) as ToolArgs);
+    } catch (_e) {
+        throw new Error('工具參數 JSON 無法解析');
+    }
+}
+
+function getMessageBodyFromArgs(rawArgs: unknown): string {
+    const obj = parseToolArgs(rawArgs);
+    if (!obj || typeof obj.message_body !== 'string') throw new Error('工具缺少 message_body');
+    const body = stripFence(obj.message_body);
+    if (!String(body).trim()) throw new Error('工具 message_body 為空');
+    return body;
+}
+
 /** @param {object} choice message 物件 */
-function extractBodyFromToolCalls(choice) {
-    var tc = choice.tool_calls;
-    var i, t, fn, rawArgs, obj, body;
-    if (tc && tc.length) {
-        for (i = 0; i < tc.length; i++) {
-            t = tc[i];
-            if (!t || t.type !== 'function') continue;
-            fn = t.function;
-            if (!fn || fn.name !== SMS_FORWARD_TOOL_NAME) continue;
-            rawArgs = fn.arguments != null ? fn.arguments : '{}';
-            try {
-                obj = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs;
-            } catch (e) {
-                throw new Error('工具參數 JSON 無法解析');
-            }
-            if (!obj || typeof obj.message_body !== 'string') throw new Error('工具缺少 message_body');
-            body = stripFence(obj.message_body);
-            if (!String(body).trim()) throw new Error('工具 message_body 為空');
-            return body;
-        }
+function extractBodyFromToolCalls(choice: Choice): string | null {
+    const toolCalls = choice.tool_calls || [];
+    for (const t of toolCalls) {
+        if (!t || t.type !== 'function' || !t.function || t.function.name !== SMS_FORWARD_TOOL_NAME) continue;
+        return getMessageBodyFromArgs(t.function.arguments);
     }
     if (choice.function_call && choice.function_call.name === SMS_FORWARD_TOOL_NAME) {
-        rawArgs = choice.function_call.arguments != null ? choice.function_call.arguments : '{}';
-        try {
-            obj = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs;
-        } catch (e2) {
-            throw new Error('工具參數 JSON 無法解析');
-        }
-        if (!obj || typeof obj.message_body !== 'string') throw new Error('工具缺少 message_body');
-        body = stripFence(obj.message_body);
-        if (!String(body).trim()) throw new Error('工具 message_body 為空');
-        return body;
+        return getMessageBodyFromArgs(choice.function_call.arguments);
     }
     return null;
 }
 
 /** @param {object} d chat completion JSON */
-function extractMessageFromAiResponse(d) {
+function extractMessageFromAiResponse(d: CompletionResponse): string {
     var choice = d && d.choices && d.choices[0] && d.choices[0].message;
     if (!choice) throw new Error('AI 回應無效');
     var fromTool = extractBodyFromToolCalls(choice);
@@ -269,8 +304,8 @@ function extractMessageFromAiResponse(d) {
     throw new Error('AI 回應缺少可用內容');
 }
 
-function callAi(text) {
-    var payload = {
+function callAi(text: string): Promise<string> {
+    const payload: Record<string, unknown> = {
         model: CFG.ai_model,
         temperature: CFG.ai_temperature,
         messages: [
@@ -294,7 +329,7 @@ function callAi(text) {
 }
 
 function sendTg(text, mode, done, quiet) {
-    var body = {
+    const body: Record<string, unknown> = {
         chat_id: CFG.chat_id,
         text: text,
         disable_web_page_preview: true,
@@ -325,32 +360,32 @@ function sendTg(text, mode, done, quiet) {
     });
 }
 
-function compactOneLine(s) {
+function compactOneLine(s: string) {
     return String(s).replace(/\s+/g, ' ').trim();
 }
 
-function sendAiErrorToTg(errMsg) {
+function sendAiErrorToTg(errMsg: string) {
     var oneLine = compactOneLine(errMsg || '未知錯誤');
     var clipped = oneLine.length > 300 ? oneLine.slice(0, 300) + '…' : oneLine;
     sendTg('⚠️ AI 處理失敗：' + clipped, null, null, true);
 }
 
-function sendBody(mv2) {
+function sendBody(mv2: string) {
     if (!extractedOtp) tryCopyOtp(extractOtpFromAiBody(mv2));
     var body = sanitizeToolBodyForMarkdownV2(String(mv2));
     sendTg(header + body, 'MarkdownV2', function () {
         if (typeof exit !== 'undefined') exit();
-    });
+    }, false);
 }
 
-function fallbackBody(raw) {
+function fallbackBody(raw: string) {
     return escMv2(raw).replace(DIG_RE, function (m) {
         return '`' + escMv2Code(m) + '`';
     });
 }
 
 /** 從簡訊原文擷取 OTP／驗證碼（4～8 位數字） */
-function extractOtpFromSms(raw) {
+function extractOtpFromSms(raw: string | null) {
     if (!raw || raw === CFG.text_no_sms) return null;
     var s = String(raw);
     var patterns = [
@@ -378,7 +413,7 @@ function extractOtpFromSms(raw) {
 }
 
 /** AI 輸出含「OTP／驗證碼」且行內 code 時，擷取反引號內數字 */
-function extractOtpFromAiBody(t) {
+function extractOtpFromAiBody(t: string | null) {
     if (!t || !CFG.copy_otp) return null;
     var s = String(t);
     if (!/OTP|驗證碼|验证码|動態|动态|授權碼|授权码/i.test(s)) return null;
@@ -386,7 +421,7 @@ function extractOtpFromAiBody(t) {
     return m ? m[1] : null;
 }
 
-function tryCopyOtp(code) {
+function tryCopyOtp(code: string | null) {
     if (!CFG.copy_otp || code == null || code === '') return;
     try {
         if (typeof setClip === 'function') {
