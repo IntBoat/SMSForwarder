@@ -4,6 +4,7 @@
   "scripts": {
     "lint": "npm run typecheck",
     "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "node scripts/check-workflow.mjs",
     "build": "tsc --project tsconfig.json && node scripts/build.mjs"
   },
   "devDependencies": {
