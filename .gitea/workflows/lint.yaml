@@ -5,10 +5,12 @@ on:
     branches:
       - master
     paths:
-      - WithCode.standalone.js
+      - WithCode.standalone.ts
+      - TelegramAPI.ts
       - scripts/**
       - package.json
       - package-lock.json
+      - tsconfig.json
       - .gitea/workflows/lint.yaml
 
 jobs:
@@ -20,10 +22,11 @@ jobs:
           fetch-depth: 0
       - uses: https://github.com/actions/setup-node@v3
         with:
-          node-version: '18.x'
+          node-version: '22.23.4'
           registry-url: 'https://registry.npmjs.org'
       - run: npm install
       - run: npm run lint
+      - run: npm test
       - run: npm run build
       - name: Commit dist updates
         run: |
